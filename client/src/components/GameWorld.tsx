@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTexture } from "@react-three/drei";
 import { useSomaGame } from "@/lib/stores/useSomaGame";
 import { NPCCharacter } from "./NPCCharacter";
 import { Building } from "./Building";
@@ -8,6 +9,12 @@ export function GameWorld() {
   const npcs = useSomaGame((state) => state.npcs);
   const buildings = useSomaGame((state) => state.buildings);
   const initializeWorld = useSomaGame((state) => state.initializeWorld);
+  
+  // Load ground texture
+  const asphaltTexture = useTexture("/textures/asphalt.png");
+  // Set texture repeat for tiling
+  asphaltTexture.wrapS = asphaltTexture.wrapT = THREE.RepeatWrapping;
+  asphaltTexture.repeat.set(20, 20);
 
   // Initialize world on first render with useMemo
   const worldData = useMemo(() => {
@@ -47,10 +54,10 @@ export function GameWorld() {
 
   return (
     <group>
-      {/* Ground plane - pixelated look */}
+      {/* Ground plane - with asphalt texture */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
-        <planeGeometry args={[100, 100, 10, 10]} />
-        <meshStandardMaterial color="#2C3E50" wireframe={false} />
+        <planeGeometry args={[100, 100]} />
+        <meshStandardMaterial map={asphaltTexture} />
       </mesh>
 
       {/* Street grid pattern */}

@@ -1,6 +1,6 @@
 import { useRef, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
-import { useKeyboardControls } from "@react-three/drei";
+import { useKeyboardControls, useTexture } from "@react-three/drei";
 import { useSomaGame } from "@/lib/stores/useSomaGame";
 import * as THREE from "three";
 
@@ -13,7 +13,7 @@ enum Controls {
 }
 
 export function Player() {
-  const meshRef = useRef<THREE.Mesh>(null);
+  const spriteRef = useRef<THREE.Sprite>(null);
   const position = useSomaGame((state) => state.position);
   const updatePosition = useSomaGame((state) => state.updatePosition);
   const incrementWalkingTime = useSomaGame((state) => state.incrementWalkingTime);
@@ -24,12 +24,15 @@ export function Player() {
   const velocityRef = useRef({ x: 0, y: 0 });
   const isMovingRef = useRef(false);
 
+  // Load player sprite texture
+  const playerTexture = useTexture("/sprites/Pixel_art_player_character_sprite_906c7782.png");
+
   useEffect(() => {
     console.log("Player initialized at position:", position);
   }, []);
 
   useFrame((state, delta) => {
-    if (!meshRef.current || phase !== "playing") return;
+    if (!spriteRef.current || phase !== "playing") return;
 
     const { forward, back, left, right } = getKeys();
     
@@ -73,8 +76,9 @@ export function Player() {
       updatePosition(boundX, boundY);
     }
 
-    // Update mesh position
-    meshRef.current.position.set(boundX, boundY, 0.5);
+    // Update sprite position (add slight bobbing when moving)
+    const bobOffset = moving ? Math.sin(state.clock.elapsedTime * 10) * 0.05 : 0;
+    spriteRef.current.position.set(boundX, boundY, 0.5 + bobOffset);
 
     // Track walking for dopamine increase
     if (moving && !isMovingRef.current) {
@@ -91,10 +95,8 @@ export function Player() {
   });
 
   return (
-    <mesh ref={meshRef} position={[position.x, position.y, 0.5]}>
-      {/* Pixelated player - simple cube */}
-      <boxGeometry args={[1, 1, 1]} />
-      <meshStandardMaterial color="#4A90E2" />
-    </mesh>
+    <sprite ref={spriteRef} position={[position.x, position.y, 0.5]} scale={[1.5, 1.5, 1]}>
+      <spriteMaterial map={playerTexture} transparent />
+    </sprite>
   );
 }

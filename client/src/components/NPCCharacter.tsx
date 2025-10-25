@@ -1,5 +1,6 @@
 import { useRef, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
+import { useTexture } from "@react-three/drei";
 import { useSomaGame, type NPC } from "@/lib/stores/useSomaGame";
 import * as THREE from "three";
 
@@ -8,20 +9,26 @@ interface NPCCharacterProps {
 }
 
 export function NPCCharacter({ npc }: NPCCharacterProps) {
-  const meshRef = useRef<THREE.Mesh>(null);
+  const spriteRef = useRef<THREE.Sprite>(null);
   const position = useSomaGame((state) => state.position);
   const startInteraction = useSomaGame((state) => state.startInteraction);
   const stats = useSomaGame((state) => state.stats);
+  
+  // Load appropriate sprite based on NPC type
+  const addictTexture = useTexture("/sprites/Pixel_art_addict_NPC_sprite_747696e9.png");
+  const cleanTexture = useTexture("/sprites/Pixel_art_clean_NPC_sprite_e5d1edc2.png");
+  
+  const texture = npc.type === "addict" ? addictTexture : cleanTexture;
   
   // Pre-calculate random idle animation offset to avoid Math.random() in render
   const idleOffset = useMemo(() => Math.random() * Math.PI * 2, []);
   
   useFrame((state) => {
-    if (!meshRef.current) return;
+    if (!spriteRef.current) return;
 
     // Idle bobbing animation
     const time = state.clock.getElapsedTime();
-    meshRef.current.position.z = 0.5 + Math.sin(time * 2 + idleOffset) * 0.1;
+    spriteRef.current.position.z = 0.5 + Math.sin(time * 2 + idleOffset) * 0.1;
 
     // Check proximity to player
     const distance = Math.sqrt(
@@ -40,14 +47,11 @@ export function NPCCharacter({ npc }: NPCCharacterProps) {
     }
   });
 
-  const color = npc.type === "addict" ? "#E74C3C" : "#2ECC71"; // Red for addicts, green for clean
-
   return (
     <group position={[npc.x, npc.y, 0]}>
-      <mesh ref={meshRef} position={[0, 0, 0.5]}>
-        <boxGeometry args={[0.8, 0.8, 1.2]} />
-        <meshStandardMaterial color={color} />
-      </mesh>
+      <sprite ref={spriteRef} position={[0, 0, 0.5]} scale={[1.2, 1.2, 1]}>
+        <spriteMaterial map={texture} transparent />
+      </sprite>
       {/* Shadow indicator */}
       <mesh position={[0, 0, 0.01]} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[0.5, 16]} />
