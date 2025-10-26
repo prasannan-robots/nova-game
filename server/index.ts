@@ -1,36 +1,65 @@
-import { createServer } from "http";
-import { app, initApp } from "./app";
+import express, { type Request, Response, NextFunction } from "express";
+import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
-// Entrypoint for running a long-lived Node server (local development
-// or when deploying the bundled server). This file creates an HTTP
-// server and starts listening. The Express `app` itself is defined in
-// `server/app.ts` so it can be imported by serverless functions without
-// immediately starting a listener.
+const app = express();
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+
+app.use((req, res, next) => {
+  const start = Date.now();
+  const path = req.path;
+  let capturedJsonResponse: Record<string, any> | undefined = undefined;
+
+  const originalResJson = res.json;
+  res.json = function (bodyJson, ...args) {
+    capturedJsonResponse = bodyJson;
+    return originalResJson.apply(res, [bodyJson, ...args]);
+  };
+
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    if (path.startsWith("/api")) {
+      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+      if (capturedJsonResponse) {
+        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+      }
+
+      if (logLine.length > 80) {
+        logLine = logLine.slice(0, 79) + "…";
+      }
+
+      log(logLine);
+    }
+  });
+
+  next();
+});
 
 (async () => {
-  await initApp();
+  const server = await registerRoutes(app);
 
-  // create the HTTP server around the configured express app
-  const server = createServer(app);
+  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    const status = err.status || err.statusCode || 500;
+    const message = err.message || "Internal Server Error";
 
-  // only setup vite in development (adds middleware and HMR)
+    res.status(status).json({ message });
+    throw err;
+  });
+
+  // importantly only setup vite in development and after
+  // setting up all the other routes so the catch-all route
+  // doesn't interfere with the other routes
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
-    // in production the server would serve static files from dist/public
-    // when running as a long-lived Node process. For serverless usage do
-    // not call serveStatic here — Vercel will serve the built static files.
-    try {
-      serveStatic(app);
-    } catch (e) {
-      // serveStatic will throw if dist isn't present; display a friendly
-      // message and continue so that local dev flows aren't blocked.
-      log("serveStatic skipped: " + (e as Error).message);
-    }
+    serveStatic(app);
   }
 
-  // prefer the platform-provided PORT (e.g. Vercel ignore, used for local)
+  // ALWAYS serve the app on port 5000
+  // this serves both the API and the client
+  // prefer the platform-provided PORT (e.g. Render, Fly, Railway)
+  // fall back to 5000 for local development
   const port = process.env.PORT ? Number(process.env.PORT) : 5000;
   server.listen({
     port,
