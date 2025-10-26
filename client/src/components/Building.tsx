@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useTexture, Text } from "@react-three/drei";
 import { useSomaGame, type Building as BuildingType } from "@/lib/stores/useSomaGame";
@@ -15,6 +15,18 @@ export function Building({ building }: BuildingProps) {
   // Load building textures
   const libraryTexture = useTexture("/sprites/Pixel_art_library_building_24a57e21.png");
   const gymTexture = useTexture("/sprites/Pixel_art_gym_building_4a28435b.png");
+  
+  // Set pixel-perfect filtering for crisp pixel art
+  useEffect(() => {
+    if (libraryTexture) {
+      libraryTexture.magFilter = THREE.NearestFilter;
+      libraryTexture.minFilter = THREE.NearestFilter;
+    }
+    if (gymTexture) {
+      gymTexture.magFilter = THREE.NearestFilter;
+      gymTexture.minFilter = THREE.NearestFilter;
+    }
+  }, [libraryTexture, gymTexture]);
   
   const isNearRef = useRef(false);
 

@@ -26,6 +26,14 @@ export function Player() {
 
   // Load player sprite texture
   const playerTexture = useTexture("/sprites/Pixel_art_player_character_sprite_906c7782.png");
+  
+  // Set pixel-perfect filtering for crisp pixel art
+  useEffect(() => {
+    if (playerTexture) {
+      playerTexture.magFilter = THREE.NearestFilter;
+      playerTexture.minFilter = THREE.NearestFilter;
+    }
+  }, [playerTexture]);
 
   useEffect(() => {
     console.log("Player initialized at position:", position);

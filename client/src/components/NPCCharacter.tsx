@@ -1,4 +1,4 @@
-import { useRef, useMemo } from "react";
+import { useRef, useMemo, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useTexture } from "@react-three/drei";
 import { useSomaGame, type NPC } from "@/lib/stores/useSomaGame";
@@ -17,6 +17,18 @@ export function NPCCharacter({ npc }: NPCCharacterProps) {
   // Load appropriate sprite based on NPC type
   const addictTexture = useTexture("/sprites/Pixel_art_addict_NPC_sprite_747696e9.png");
   const cleanTexture = useTexture("/sprites/Pixel_art_clean_NPC_sprite_e5d1edc2.png");
+  
+  // Set pixel-perfect filtering for crisp pixel art
+  useEffect(() => {
+    if (addictTexture) {
+      addictTexture.magFilter = THREE.NearestFilter;
+      addictTexture.minFilter = THREE.NearestFilter;
+    }
+    if (cleanTexture) {
+      cleanTexture.magFilter = THREE.NearestFilter;
+      cleanTexture.minFilter = THREE.NearestFilter;
+    }
+  }, [addictTexture, cleanTexture]);
   
   const texture = npc.type === "addict" ? addictTexture : cleanTexture;
   
